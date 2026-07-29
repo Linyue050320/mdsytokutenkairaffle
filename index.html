@@ -1,0 +1,765 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>MODYSSEY 特典会抽选模拟器</title>
+<style>
+  /* ========== 全局基础 ========== */
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body {
+    font-family: "Hiragino Mincho ProN", "Yu Mincho", "Songti SC", "SimSun", "Noto Serif CJK SC", serif;
+    background: #f5f5f5;
+    color: #1a1a1a;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ========== 顶部品牌栏（仿日本站顶部） ========== */
+  .top-bar {
+    background: #fff;
+    padding: 18px 16px 14px;
+    text-align: center;
+    border-bottom: 1px solid #eee;
+  }
+  .top-bar .brand {
+    color: #d70c18;
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    font-family: "Times New Roman", "Hiragino Mincho ProN", serif;
+  }
+  .top-bar .sub {
+    margin-top: 2px;
+    font-size: 11px;
+    color: #888;
+    letter-spacing: 2px;
+  }
+
+  /* ========== 步骤指示器 ========== */
+  .steps {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: #fff;
+    border-bottom: 1px solid #eee;
+    font-size: 10px;
+    color: #aaa;
+    font-family: -apple-system, "Helvetica Neue", Arial, sans-serif;
+  }
+  .steps .dot {
+    width: 18px; height: 18px; border-radius: 50%;
+    background: #eee; color: #999;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-weight: 600; margin-right: 4px;
+  }
+  .steps .step-item { display: flex; align-items: center; }
+  .steps .step-item.active .dot { background: #d70c18; color: #fff; }
+  .steps .step-item.active { color: #d70c18; font-weight: 600; }
+  .steps .sep { color: #ddd; }
+
+  /* ========== 主体容器 ========== */
+  .container {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 16px 14px 80px;
+  }
+
+  /* ========== 通用卡片 ========== */
+  .card {
+    background: #fff;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    padding: 22px 20px;
+    margin-bottom: 14px;
+  }
+  .card h2 {
+    font-size: 18px;
+    text-align: center;
+    margin-bottom: 6px;
+    color: #1a1a1a;
+    font-weight: 700;
+  }
+  .card .sub-tip {
+    text-align: center;
+    color: #888;
+    font-size: 11px;
+    letter-spacing: 1px;
+    margin-bottom: 18px;
+  }
+  .card h3 {
+    font-size: 13px;
+    color: #555;
+    margin: 14px 0 10px;
+    font-weight: 600;
+    border-left: 3px solid #d70c18;
+    padding-left: 8px;
+  }
+
+  /* ========== 应募类型切换 ========== */
+  .toggle-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .toggle-btn {
+    padding: 14px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    text-align: center;
+    cursor: pointer;
+    background: #fafafa;
+    font-size: 14px;
+    color: #888;
+    transition: all .15s;
+  }
+  .toggle-btn.sel {
+    background: #d70c18;
+    border-color: #d70c18;
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* ========== 成员选择九宫格 ========== */
+  .member-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .member-grid .opt {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 14px 6px;
+    text-align: center;
+    font-size: 13px;
+    cursor: pointer;
+    background: #fafafa;
+    color: #555;
+    transition: all .15s;
+    user-select: none;
+  }
+  .member-grid .opt.sel {
+    background: #d70c18;
+    border-color: #d70c18;
+    color: #fff;
+    font-weight: 600;
+  }
+  .member-grid .opt.disabled { opacity: 0.4; pointer-events: none; }
+  .member-grid.disabled .opt { opacity: 0.4; pointer-events: none; background: #f0f0f0; }
+
+  /* ========== 数量步进 ========== */
+  .qty-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px 14px;
+    margin-top: 4px;
+  }
+  .qty-row .qty-label { font-size: 13px; color: #555; }
+  .qty-row .qty-label .unit { color: #999; font-size: 11px; margin-left: 6px; }
+  .qty-stepper { display: flex; align-items: center; gap: 12px; }
+  .qty-stepper button {
+    width: 32px; height: 32px;
+    border: 1px solid #ddd; background: #fff;
+    border-radius: 4px; font-size: 18px; cursor: pointer;
+    color: #555;
+  }
+  .qty-stepper input {
+    width: 60px; text-align: center; border: none; font-size: 18px;
+    font-weight: 700; color: #1a1a1a; background: transparent;
+  }
+  .qty-stepper input:focus { outline: none; }
+
+  /* ========== 信息条 ========== */
+  .info-bar {
+    background: #fff5f5;
+    border-radius: 4px;
+    padding: 12px 16px;
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+    color: #d70c18;
+    margin-top: 14px;
+    font-weight: 600;
+  }
+
+  /* ========== 主按钮 ========== */
+  .btn-primary {
+    width: 100%;
+    background: #d70c18;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 16px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-top: 18px;
+    letter-spacing: 2px;
+    box-shadow: 0 2px 0 #a00810;
+    transition: transform .1s;
+  }
+  .btn-primary:active { transform: translateY(1px); box-shadow: 0 1px 0 #a00810; }
+  .btn-secondary {
+    width: 100%;
+    background: #fff;
+    color: #555;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 14px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+
+  /* ========== 结算明细表 ========== */
+  .summary {
+    background: #fafafa;
+    border-radius: 4px;
+    padding: 14px 16px;
+    font-size: 13px;
+    margin-top: 14px;
+  }
+  .summary .row { display: flex; justify-content: space-between; padding: 6px 0; color: #555; }
+  .summary .row.divider { border-top: 1px dashed #ddd; margin-top: 4px; padding-top: 10px; }
+  .summary .row.total { color: #d70c18; font-weight: 700; font-size: 16px; padding-top: 8px; }
+  .summary .row.total .lbl { font-size: 14px; }
+
+  /* ========== 支付页（仿Apple Pay风格） ========== */
+  .paypage {
+    background: #f5f5f5;
+    min-height: 100vh;
+    padding: 20px 14px;
+    max-width: 480px; margin: 0 auto;
+  }
+  .pay-banner {
+    background: #1a1a1a;
+    color: #fff;
+    border-radius: 12px;
+    padding: 18px;
+    text-align: center;
+    margin-bottom: 14px;
+  }
+  .pay-banner .pay-brand {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 22px; font-weight: 700;
+  }
+  .pay-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 24px 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  }
+  .pay-card .line {
+    display: flex; justify-content: space-between; padding: 14px 0;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+  }
+  .pay-card .line:last-of-type { border-bottom: none; }
+  .pay-card .line .k { color: #888; }
+  .pay-card .line .v { color: #1a1a1a; font-weight: 600; }
+  .pay-card .line.big .v { font-size: 26px; color: #1a1a1a; }
+  .face-id {
+    width: 64px; height: 64px; border: 2px solid #007aff;
+    border-radius: 12px; margin: 26px auto 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; color: #007aff;
+  }
+  .pay-hint { text-align: center; color: #007aff; font-size: 13px; margin-top: 6px; }
+  .pay-cancel { text-align: center; color: #888; font-size: 13px; margin-top: 14px; cursor: pointer; }
+
+  /* ========== 抽选结果页（仿Whoop抽选结果一览） ========== */
+  .result-title {
+    text-align: center;
+    font-size: 22px;
+    font-weight: 700;
+    margin: 20px 0 6px;
+  }
+  .result-tip {
+    text-align: center;
+    color: #888;
+    font-size: 12px;
+    line-height: 1.7;
+    margin-bottom: 18px;
+  }
+  .result-item {
+    background: #fff;
+    border-radius: 4px;
+    padding: 16px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    position: relative;
+    border-left: 4px solid #d70c18;
+  }
+  .result-item .badge {
+    display: inline-block;
+    background: #d70c18;
+    color: #fff;
+    font-size: 11px;
+    padding: 2px 10px;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    letter-spacing: 1px;
+  }
+  .result-item .title { font-size: 15px; font-weight: 700; margin-bottom: 4px; }
+  .result-item .desc { font-size: 12px; color: #888; line-height: 1.6; }
+  .result-item .check {
+    position: absolute; right: 16px; top: 50%; transform: translateY(-50%);
+    color: #ddd; font-size: 28px;
+  }
+  .result-item.not-selected { border-left-color: #bbb; }
+  .result-item.not-selected .badge { background: #aaa; }
+  .result-item.not-selected .check { color: #d70c18; }
+  .result-divider { height: 1px; background: #ddd; margin: 16px 0; }
+
+  /* 结果汇总条 */
+  .result-summary {
+    background: #fff;
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-bottom: 14px;
+    text-align: center;
+    font-size: 13px;
+    color: #555;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  }
+  .result-summary b { color: #1a1a1a; font-size: 15px; }
+  .result-summary b.win { color: #d70c18; }
+  .result-summary b.miss { color: #999; }
+
+  /* 分组分隔标题 */
+  .group-label {
+    font-size: 12px;
+    color: #999;
+    letter-spacing: 2px;
+    margin: 14px 0 8px 4px;
+    font-weight: 600;
+  }
+  .group-label.win { color: #d70c18; }
+  .group-label.miss { color: #aaa; }
+
+  /* ========== 浮动/通用 ========== */
+  .hidden { display: none !important; }
+  .muted { color: #888; font-size: 12px; }
+  .footer-note {
+    text-align: center; color: #aaa; font-size: 10px;
+    margin-top: 30px; line-height: 1.6;
+  }
+  .footer-note .red { color: #d70c18; font-weight: 600; }
+
+  /* 选成员时可点击的过渡 */
+  .opt:active { transform: scale(0.98); }
+
+  /* 抽选中的转盘效果 */
+  .spinner-overlay {
+    position: fixed; inset: 0; background: rgba(255,255,255,0.92);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; flex-direction: column;
+  }
+  .spinner {
+    width: 60px; height: 60px;
+    border: 4px solid #f5f5f5;
+    border-top-color: #d70c18;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  .spinner-text { margin-top: 16px; color: #d70c18; font-size: 14px; letter-spacing: 2px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ============== 顶部品牌栏 ============== -->
+<div class="top-bar">
+  <div class="brand">MODYSSEY Official</div>
+  <div class="sub">特典会 抽选 模拟器</div>
+</div>
+
+<!-- ============== 步骤指示 ============== -->
+<div class="steps" id="steps">
+  <div class="step-item active" data-step="1"><span class="dot">1</span>选择应募</div>
+  <span class="sep">›</span>
+  <div class="step-item" data-step="2"><span class="dot">2</span>支付</div>
+  <span class="sep">›</span>
+  <div class="step-item" data-step="3"><span class="dot">3</span>抽选</div>
+</div>
+
+<!-- ============== 第1页：选择应募 + 数量 ============== -->
+<div class="container" id="page-order">
+  <div class="card">
+    <h2>MODYSSEY 抽选模拟</h2>
+    <div class="sub-tip">APPLICATION · 特典会应募</div>
+    <div style="text-align:center;font-size:12px;color:#888;margin-bottom:6px;">本模拟器仅作娱乐用途，<br>非官方活动，不代表真实中选结果。</div>
+
+    <h3>应募方式</h3>
+    <div class="toggle-group">
+      <div class="toggle-btn sel" data-mode="single">指定成员应募</div>
+      <div class="toggle-btn" data-mode="all">全员混合应募</div>
+    </div>
+
+    <h3>选择成员（指定成员模式下必选1人）</h3>
+    <div class="member-grid" id="memberGrid">
+      <div class="opt" data-m="孙亨裕">孙亨裕</div>
+      <div class="opt" data-m="范哲逸">范哲逸</div>
+      <div class="opt" data-m="李梓豪">李梓豪</div>
+      <div class="opt" data-m="林林">林林</div>
+      <div class="opt" data-m="薛苏仁">薛苏仁</div>
+      <div class="opt" data-m="亦辰">亦辰</div>
+      <div class="opt" data-m="颜秋越">颜秋越</div>
+    </div>
+
+    <h3>购买数量</h3>
+    <div class="qty-row">
+      <div class="qty-label">下单专辑数量<span class="unit">¥45/张 · 0.72 KG/EA</span></div>
+      <div class="qty-stepper">
+        <button type="button" onclick="changeQty(-1)">−</button>
+        <input type="number" id="qty" value="1" min="1" max="999">
+        <button type="button" onclick="changeQty(1)">+</button>
+      </div>
+    </div>
+
+    <div class="info-bar">
+      <span>预估重量：<span id="weight">0.72</span> kg</span>
+      <span>邮费：<span id="shipFee">¥0</span></span>
+    </div>
+
+    <button class="btn-primary" onclick="goPay()">确认下单</button>
+  </div>
+</div>
+
+<!-- ============== 第3页：模拟支付 ============== -->
+<div class="paypage hidden" id="page-pay">
+  <div class="pay-banner">
+    <div class="pay-brand"> Pay</div>
+    <div style="margin-top:6px;font-size:12px;letter-spacing:2px;opacity:0.7;">MODYSSEY 官方商城</div>
+  </div>
+  <div class="pay-card">
+    <div class="line">
+      <span class="k">商户</span>
+      <span class="v">MODYSSEY Global Event</span>
+    </div>
+    <div class="line">
+      <span class="k">项目</span>
+      <span class="v" id="payItem">指定：-</span>
+    </div>
+    <div class="line big">
+      <span class="k">总计</span>
+      <span class="v" id="payTotal">¥0</span>
+    </div>
+    <div class="face-id">☺</div>
+    <div class="pay-hint">Double Click to Pay</div>
+    <div class="pay-cancel" onclick="goPage('page-order')">取消</div>
+  </div>
+  <div class="footer-note" style="margin-top:30px;">
+    模拟支付页面，点击「双击支付」或以下按钮完成模拟付款<br>
+    <span class="red">※ 不会发生任何真实扣款</span>
+  </div>
+  <button class="btn-primary" style="max-width:480px;margin:14px auto;display:block;position:relative;left:50%;transform:translateX(-50%);" onclick="doPay()">双击支付 (Double Click)</button>
+</div>
+
+<!-- ============== 第4页：抽选结果 ============== -->
+<div class="container hidden" id="page-result">
+  <div class="result-title">抽选结果一览</div>
+  <div class="result-tip">
+    こちらの画面をスマートフォンで<br>
+    ブックマークすることをおすすめします。
+  </div>
+  <div id="resultList"></div>
+
+  <div class="card" style="margin-top:18px;">
+    <div class="summary">
+      <div class="row"><span>CD 费用</span><span id="rCd">¥0</span></div>
+      <div class="row"><span>运费 (<span id="rKg">0</span> kg)</span><span id="rShip">¥0</span></div>
+      <div class="row total divider"><span class="lbl">实付金额</span><span id="rTotal">¥0</span></div>
+    </div>
+    <button class="btn-primary" onclick="resetAll()">再试一次</button>
+  </div>
+
+  <div class="footer-note">
+    <span class="red">※ 本结果为完全随机生成，仅供娱乐</span><br>
+    ※ 实际日本特典会抽选中选率极低，请理性应募
+  </div>
+</div>
+
+<!-- 抽选中加载层 -->
+<div class="spinner-overlay hidden" id="loading">
+  <div class="spinner"></div>
+  <div class="spinner-text">抽选处理中…</div>
+</div>
+
+<script>
+  // ====== 数据 ======
+  const MEMBERS = ['孙亨裕','范哲逸','李梓豪','林林','薛苏仁','亦辰','颜秋越'];
+
+  // 单张专辑参数
+  const ALBUM_WEIGHT_KG = 0.72;       // 单张重量
+  const ALBUM_PRICE = 45;             // 单张价格 (人民币)
+  const SHIP_BASE = 23;               // 邮费起步价
+  const SHIP_PER_KG = 65;             // 每公斤续重 (人民币)
+
+  // ====== 状态 ======
+  const state = {
+    mode: 'single',     // single | all
+    member: null,
+    qty: 1,
+    page: 1
+  };
+
+  // ====== 工具：货币显示（统一人民币） ======
+  function formatMoney(amountCNY) {
+    return '¥' + amountCNY.toFixed(1);
+  }
+
+  // ====== 计算邮费 ======
+  function calcShipFee(qty) {
+    const weight = qty * ALBUM_WEIGHT_KG;
+    const fee = SHIP_BASE + Math.max(0, weight - 1) * SHIP_PER_KG;
+    return { weight, fee };
+  }
+
+  // ====== 绑定事件：应募模式 ======
+  document.querySelectorAll('.toggle-btn').forEach(el => {
+    el.addEventListener('click', () => {
+      document.querySelectorAll('.toggle-btn').forEach(x => x.classList.remove('sel'));
+      el.classList.add('sel');
+      state.mode = el.dataset.mode;
+      // 切换模式时重置成员选择
+      document.querySelectorAll('#memberGrid .opt').forEach(x => x.classList.remove('sel'));
+      state.member = null;
+      // 全员混合：成员变灰禁用；指定成员：恢复可选
+      const grid = document.getElementById('memberGrid');
+      if (state.mode === 'all') {
+        grid.classList.add('disabled');
+      } else {
+        grid.classList.remove('disabled');
+      }
+    });
+  });
+
+  // ====== 绑定事件：成员 ======
+  document.querySelectorAll('#memberGrid .opt').forEach(el => {
+    el.addEventListener('click', () => {
+      if (state.mode === 'all') return; // 全员混合下不可选
+      document.querySelectorAll('#memberGrid .opt').forEach(x => x.classList.remove('sel'));
+      el.classList.add('sel');
+      state.member = el.dataset.m;
+    });
+  });
+
+  // ====== 数量步进 ======
+  function changeQty(delta) {
+    const input = document.getElementById('qty');
+    let v = parseInt(input.value || '1', 10) + delta;
+    if (isNaN(v)) v = 1;
+    v = Math.max(1, Math.min(999, v));
+    input.value = v;
+    state.qty = v;
+    updateOrderInfo();
+  }
+  document.getElementById('qty').addEventListener('input', (e) => {
+    let v = parseInt(e.target.value || '1', 10);
+    if (isNaN(v) || v < 1) v = 1;
+    if (v > 999) v = 999;
+    state.qty = v;
+    updateOrderInfo();
+  });
+
+  function updateOrderInfo() {
+    const { weight, fee } = calcShipFee(state.qty);
+    document.getElementById('weight').textContent = weight.toFixed(2);
+    document.getElementById('shipFee').textContent = formatMoney(fee);
+  }
+
+  // ====== 页面切换 ======
+  function goPage(id) {
+    ['page-order','page-pay','page-result'].forEach(p => {
+      document.getElementById(p).classList.add('hidden');
+    });
+    document.getElementById(id).classList.remove('hidden');
+    // 步骤高亮
+    const map = { 'page-order':1, 'page-pay':2, 'page-result':3 };
+    document.querySelectorAll('.steps .step-item').forEach(s => {
+      s.classList.toggle('active', parseInt(s.dataset.step,10) <= map[id]);
+    });
+    window.scrollTo(0, 0);
+  }
+
+  function goPay() {
+    // 校验
+    if (state.mode === 'single' && !state.member) {
+      const any = document.querySelector('#memberGrid .opt.sel');
+      if (!any) { alert('请先选择一位指定成员！'); return; }
+    }
+    const cd = state.qty * ALBUM_PRICE;
+    const { weight, fee } = calcShipFee(state.qty);
+    const total = cd + fee;
+
+    document.getElementById('payItem').textContent =
+      state.mode === 'all' ? '全员混合应募' : '指定：' + state.member;
+    document.getElementById('payTotal').textContent = formatMoney(total);
+    goPage('page-pay');
+  }
+
+  function doPay() {
+    // 模拟双击支付 = 一次点击就算
+    document.getElementById('loading').classList.remove('hidden');
+    setTimeout(() => {
+      document.getElementById('loading').classList.add('hidden');
+      drawResults();
+      goPage('page-result');
+    }, 1200);
+  }
+
+  // ====== 抽选算法 ======
+  function pickOne(pool) {
+    const totalW = pool.reduce((s, x) => s + x.weight, 0);
+    let r = Math.random() * totalW;
+    for (const x of pool) {
+      r -= x.weight;
+      if (r <= 0) return x;
+    }
+    return pool[pool.length - 1];
+  }
+
+  // 随机抽取一名成员
+  function randomMember() {
+    return MEMBERS[Math.floor(Math.random() * MEMBERS.length)];
+  }
+
+  // 把池子里的 miss 抽出来（按一定几率出 中选 / miss）
+  function rollForOne(applicablePool) {
+    // 先判断中选 vs 未中选：约 25% 中选 / 75% 未中选
+    const hit = Math.random() < 0.25;
+    if (!hit) return { id:'miss', label:'未中选', weight:1, icon:'○' };
+    const picked = pickOne(applicablePool.filter(x => x.id !== 'miss'));
+    // 单人福利：全员混合模式下随机指定一名成员
+    let label = picked.label;
+    if (picked.solo && state.mode === 'all') {
+      const m = randomMember();
+      label = `【${m}】${picked.label}`;
+    } else if (picked.solo && state.mode === 'single') {
+      label = `【${state.member}】${picked.label}`;
+    }
+    return { id: picked.id, label, weight: picked.weight, icon: picked.icon };
+  }
+
+  function getApplicablePool() {
+    if (state.mode === 'all') {
+      // 全员混合：单人福利标记 solo，rollForOne 时随机指定成员
+      return [
+        { id: 'group_polaroid', label: '团体拍立得合影', weight: 3, icon: '★' },
+        { id: 'solo_polaroid',  label: '单人拍立得合影', weight: 6, icon: '★', solo: true },
+        { id: 'group_phone',    label: '团体手机合影',   weight: 6, icon: '★' },
+        { id: 'solo_phone',     label: '单人手机合影',   weight: 10, icon: '★', solo: true },
+        { id: 'group_sign',     label: '团体签售',       weight: 4, icon: '★' },
+        { id: 'solo_sign',      label: '单人签售',       weight: 12, icon: '★', solo: true },
+        { id: 'group_handover', label: '团体手渡',       weight: 4, icon: '★' },
+        { id: 'group_highfive', label: '团体拍手',       weight: 8, icon: '★' },
+        { id: 'miss',           label: '未中选',         weight: 60, icon: '○' },
+      ];
+    }
+    // 单成员：只出 该成员 的 单人拍立得 / 单人手机 / 单人签售 / miss
+    const m = state.member;
+    return [
+      { id: 'solo_polaroid', label: '单人拍立得合影', weight: 8, icon: '★', solo: true },
+      { id: 'solo_phone',    label: '单人手机合影',   weight: 12, icon: '★', solo: true },
+      { id: 'solo_sign',     label: '单人签售',       weight: 14, icon: '★', solo: true },
+      { id: 'miss',          label: '未中选',         weight: 66, icon: '○' },
+    ];
+  }
+
+  function drawResults() {
+    const list = document.getElementById('resultList');
+    list.innerHTML = '';
+    const pool = getApplicablePool();
+    const results = [];
+    for (let i = 0; i < state.qty; i++) {
+      results.push(rollForOne(pool));
+    }
+
+    // 排序：中选在前，未中选在后
+    results.sort((a, b) => {
+      const aMiss = a.id === 'miss' ? 1 : 0;
+      const bMiss = b.id === 'miss' ? 1 : 0;
+      return aMiss - bMiss;
+    });
+
+    // 统计中选数
+    const winCount = results.filter(r => r.id !== 'miss').length;
+    const totalCount = results.length;
+
+    // 顶部汇总提示
+    const summaryDiv = document.createElement('div');
+    summaryDiv.className = 'result-summary';
+    summaryDiv.innerHTML = `应募 <b>${totalCount}</b> 张 · 中选 <b class="win">${winCount}</b> 张 · 未中选 <b class="miss">${totalCount - winCount}</b> 张`;
+    list.appendChild(summaryDiv);
+
+    // 渲染（中选在前，未中选在后，之间加分隔标题）
+    let prevWasMiss = null;
+    results.forEach((r, idx) => {
+      const isMiss = r.id === 'miss';
+      // 中选分组首个前插入标题
+      if (!isMiss && prevWasMiss === null) {
+        const lbl = document.createElement('div');
+        lbl.className = 'group-label win';
+        lbl.textContent = '— 中选 —';
+        list.appendChild(lbl);
+      }
+      // 进入未中选分组时插入分隔标题
+      if (isMiss && prevWasMiss === false) {
+        const lbl = document.createElement('div');
+        lbl.className = 'group-label miss';
+        lbl.textContent = '— 未中选 —';
+        list.appendChild(lbl);
+      }
+      const div = document.createElement('div');
+      div.className = 'result-item' + (isMiss ? ' not-selected' : '');
+      div.innerHTML = `
+        <span class="badge">${isMiss ? '未使用' : '当選'}</span>
+        <div class="title">${r.icon} ${escapeHtml(r.label)}</div>
+        <div class="desc">${isMiss
+          ? '很遗憾，本次未中选。感谢您的应募。'
+          : '【中选】※ 活动日3天前会通过订单邮箱发送活动详情通知。'}</div>
+        <div class="check">${isMiss ? '✕' : '✓'}</div>
+      `;
+      list.appendChild(div);
+      prevWasMiss = isMiss;
+    });
+
+    // 结算
+    const cd = state.qty * ALBUM_PRICE;
+    const { weight, fee } = calcShipFee(state.qty);
+    const total = cd + fee;
+    document.getElementById('rCd').textContent = formatMoney(cd);
+    document.getElementById('rKg').textContent = weight.toFixed(1);
+    document.getElementById('rShip').textContent = formatMoney(fee);
+    document.getElementById('rTotal').textContent = formatMoney(total);
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+    }[c]));
+  }
+
+  function resetAll() {
+    state.member = null;
+    state.qty = 1;
+    document.getElementById('qty').value = 1;
+    document.querySelectorAll('#memberGrid .opt').forEach(x => x.classList.remove('sel'));
+    document.querySelectorAll('.toggle-btn').forEach(x => x.classList.remove('sel'));
+    document.querySelector('.toggle-btn[data-mode="single"]').classList.add('sel');
+    state.mode = 'single';
+    updateOrderInfo();
+    goPage('page-order');
+  }
+
+  // 初始化
+  updateOrderInfo();
+</script>
+</body>
+</html>
